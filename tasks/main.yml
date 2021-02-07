@@ -1,0 +1,39 @@
+---
+
+# Variables setup
+- name: 0.Include os-specific variables.
+  include_vars: RedHat.yml
+
+- name: 1.Install Dependencies.
+  include: setup-docker-deps.yml
+  when: not skip_depends
+  tags:
+    - setup
+
+- name: 2.Install Docker components
+  include: setup-docker-comps.yml
+  when: not skip_docker_core
+  tags:
+    - install-docker-core
+
+# Setup the Docker Swarm Cluster
+- name: 3.Setup the Docker Swarm Cluster
+  include: setup-docker-swarm.yml
+  when: not skip_swarm
+  tags:
+    - setup-docker-swarm
+
+# Adds the Docker admin users to the Docker group
+- name: 4.Adds users to the Docker group
+  include: setup-docker-group.yml
+  when: not skip_group
+  tags:
+    - add-to-docker-group
+
+# Install docker-compose
+- name: 5.Install docker-compose
+  include: setup-docker-compose.yml
+  when: not skip_docker_compose
+  tags:
+    - install-docker-compose
+

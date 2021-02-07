@@ -1,0 +1,28 @@
+---
+
+
+- name: 3.2.4.Assign labels of inventory_hostname  to manager swarm nodes
+  command: docker node update --label-add manager={{ inventory_hostname }} {{ ansible_fqdn|lower }}
+  when: "'docker_swarm_manager' in group_names"
+  delegate_to: "{{ groups['docker_swarm_manager'][0] }}"
+  delegate_facts: true
+  tags:
+    - swarm_labels
+
+- name: 3.2.5.Assign labels of inventory_hostname  to worker swarm nodes
+  command: docker node update --label-add worker={{ inventory_hostname }} {{ ansible_fqdn|lower }}
+  when: "'docker_swarm_worker' in group_names"
+  delegate_to: "{{ groups['docker_swarm_manager'][0] }}"
+  delegate_facts: true
+  tags:
+    - swarm_labels
+
+- name: 3.2.3.Assign labels to swarm nodes if any.
+  command: docker node update --label-add {{ item }}=true {{ ansible_fqdn|lower }}
+  when: item not in docker_swarm_labels.stdout_lines
+  with_items:
+    - "{{ swarm_labels  | default([]) }}"
+  delegate_to: "{{ groups['docker_swarm_manager'][0] }}"
+  delegate_facts: true
+  tags:
+    - swarm_labels

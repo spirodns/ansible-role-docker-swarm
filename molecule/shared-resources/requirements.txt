@@ -1,0 +1,9 @@
+boto    # Needed for ec2 driver specificaly
+boto3   # Needed for ec2 driver specificaly
+awscli  # Needed for ec2 driver specificaly
+ansible==2.7
+docker
+molecule>=3.0a3
+molecule-ec2
+Jinja2==2.10
+testinfra==1.19.0

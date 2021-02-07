@@ -1,0 +1,51 @@
+---
+
+# Install the Docker and EPEL repositories
+- name: 1.0.Install repositories
+  include: repo-RedHat.yml
+  when: ( not skip_repo and ansible_os_family == 'RedHat' )
+  tags:
+    - setup
+    - setup-repos
+
+- name: 1.1.Install yum-utils if necessary.
+  yum:
+    name: yum-utils
+    state: present
+  tags:
+    - setup
+    - setup-yum-utils
+
+- name: 1.2.Install python-pip.
+  package:
+    name: "{{ python_pip_packages }}"
+    state: present
+  when: not skip_docker_compose
+  tags:
+    - setup
+    - setup-python-pip
+
+# Install the Docker dependencies
+- name: 1.3.Install Docker dependencies.
+  package:
+    name: "{{ docker_dependencies }}"
+    state: present
+  when: not skip_containerd or not skip_engine
+  tags:
+    - setup
+    - setup-docker-depends
+
+- name: 1.4.Install docker_stack module dependencies.
+  pip:
+    name: "{{ docker_stack_module_dependencies }}"
+    state: present
+  when: not skip_containerd or not skip_engine
+  tags:
+    - setup
+    - setup-docker-stack-depends
+
+- name: 1.5.Install docker-py.
+  pip:
+    name: "{{ docker_py_package_name }}"
+    version: "{{ docker_py_package_version }}"
+    state: "{{ docker_py_package_state }}"

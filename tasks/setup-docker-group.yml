@@ -1,0 +1,20 @@
+---
+
+- name: 4.1.Add the Docker administrators to the Docker group.
+  user:
+    name: "{{ item }}"
+    groups: "{{ docker_group_name }}"
+    append: true
+  register: addtogroup
+  become: true
+  with_items: "{{ docker_group_users }}"
+
+# See https://stackoverflow.com/a/44753457
+- name: 4.2.Reset ansible connection after group changes (Ansible >= 2.3.0).
+  include_tasks: reset-connection.yml
+  when: ansible_version is defined
+    and (ansible_version.full is version_compare('2.3.0.0', '>='))
+    and ansible_connection in ['ssh', 'smart']
+    and ansible_user is defined
+    and ansible_user in docker_group_users
+    and ansible_user in (addtogroup.results | selectattr('changed') | map(attribute='item') | list)

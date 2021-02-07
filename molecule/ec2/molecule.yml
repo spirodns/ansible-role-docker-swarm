@@ -1,0 +1,30 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: ec2
+lint: |
+  ansible-lint
+  yamllint .
+  flake8
+platforms:
+  - name: ec2-amzlinux2
+    image_name: amzn2-ami-hvm-2.0.20190618-x86_64-gp2
+    image_owner: amazon
+  - name: ec2-amzlinux
+    image_name: amzn-ami-hvm-2018.03.0.20190611-x86_64-gp2
+    image_owner: amazon
+provisioner:
+  name: ansible
+  log: true
+  playbooks:
+    converge: ../shared-resources/playbooks/playbook.yml
+  inventory:
+    links:
+      group_vars: inventory/group_vars
+scenario:
+  name: ec2
+verifier:
+  name: testinfra
+  directory: ../shared-resources/tests
+

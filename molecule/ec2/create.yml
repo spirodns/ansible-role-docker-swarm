@@ -1,0 +1,172 @@
+---
+- name: Create
+  hosts: localhost
+  gather_facts: true
+  no_log: "{{ not molecule_yml.provisioner.log| bool }}"
+  vars:
+    aws_region: "{{ lookup('env', 'AWS_REGION') }}"
+  tasks:
+    - name: Get the current caller identity facts
+      aws_caller_facts:
+      register: caller_facts
+
+    - name: Generate unique name for aws resources
+      set_fact:
+        aws_resource_unique_name: "{{ role_name }}-{{ branch }}-{{ suffix }}"
+        source_info: "{{ role_name }}-{{ branch }}"
+        test_triggered_by: "{{ caller_facts.user_id.split(':')[1] }}"
+      vars:
+        suffix: "{{ ansible_facts.ansible_machine_id | default(caller_facts.user_id.split(':')[1]) }}"
+
+    - name: Check if test trigered by jenkins
+      set_fact:
+        test_triggered_by: "Jenkins-{{ test_triggered_by }}"
+      when: '"Jenkins" in caller_facts.arn  or "jenkins" in caller_facts.arn'
+
+    - name: get public ip of ansible host
+      ipify_facts:
+      register: public_ip
+
+    - name: add cidr info to dict
+      set_fact:
+        sg_ing_rules: "{{ sg_ing_rules + [ing_rule] }}"
+      vars:
+        public_ip_p: "{ 'cidr_ip': '{{ public_ip.ansible_facts.ipify_public_ip }}/32' }"
+        ing_rule: "{{ item | combine(public_ip_p) }}"
+      with_items: "{{ security_group_rules['ingress'] }}"
+
+    - name: Get vpc info
+      ec2_vpc_subnet_facts:
+        filters:
+          "tag:Purpose": Testing
+      register: subnet_facts
+
+
+    - name: Create security group
+      ec2_group:
+        name: "{{ aws_resource_unique_name }}"
+        description: "{{ security_group_description }}"
+        rules: "{{ sg_ing_rules }}"
+        rules_egress: "{{ security_group_rules['egress'] }}"
+        tags:
+          Name: "{{ source_info }}"
+          Purpose: "Testing"
+          CreatedBy: "Molecule"
+          AnsibleRole: "{{ role_name }}"
+          TriggeredBy: "{{ test_triggered_by }}"
+        vpc_id: "{{ subnet_facts.subnets[0].vpc_id }}"
+        region: "{{ aws_region }}"
+
+    - name: Test for presence of local keypair
+      stat:
+        path: "{{ keypair_path }}"
+      register: keypair_local
+
+    - name: Delete remote keypair
+      ec2_key:
+        name: "{{ aws_resource_unique_name }}"
+        state: absent
+        region: "{{ aws_region }}"
+      when: not keypair_local.stat.exists
+
+    - name: Create keypair
+      ec2_key:
+        name: "{{ aws_resource_unique_name }}"
+        region: "{{ aws_region }}"
+      register: keypair
+
+    - name: Persist the keypair
+      copy:
+        dest: "{{ keypair_path }}"
+        content: "{{ keypair.key.private_key }}"
+        mode: 0600
+      when: keypair.changed
+
+    - name: Get the ec2 ami(s) by owner and name, if image not set
+      ec2_ami_facts:
+        owners: "{{ item.image_owner }}"
+        filters:
+          name: "{{ item.image_name }}"
+      loop: "{{ molecule_yml.platforms }}"
+      when: item.image is not defined
+      register: ami_facts
+
+    - name: Create molecule instance(s)
+      ec2:
+        key_name: "{{ aws_resource_unique_name }}"
+        image: "{{ item.image
+          if item.image is defined
+          else (ami_facts.results[index].images | sort(attribute='creation_date', reverse=True))[0].image_id }}"
+        instance_type: "{{ instance_type }}"
+        vpc_subnet_id: "{{ subnet_facts.subnets[0].subnet_id }}"
+        region: "{{ aws_region }}"
+        group: "{{ aws_resource_unique_name }}"
+        instance_tags:
+          instance: "{{ item.name }}"
+          Name: "{{ source_info }}"
+          Purpose: "Testing"
+          CreatedBy: "Molecule"
+          AnsibleRole: "{{ role_name }}"
+          TriggeredBy: "{{ test_triggered_by }}"
+        wait: true
+        assign_public_ip: true
+        exact_count: 1
+        count_tag:
+          instance: "{{ item.name }}"
+          Name: "{{ source_info }}"
+          Purpose: "Testing"
+          CreatedBy: "Molecule"
+          AnsibleRoleName: "{{ role_name }}"
+          TriggeredBy: "{{ test_triggered_by }}"
+      register: server
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
+      async: 7200
+      poll: 0
+
+    - name: Wait for instance(s) creation to complete
+      async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: ec2_jobs
+      until: ec2_jobs.finished
+      retries: 300
+      with_items: "{{ server.results }}"
+
+    - name: Populate instance config dict
+      set_fact:
+        instance_conf_dict: {
+          'instance': "{{ item.instances[0].tags.instance }}",
+          'address': "{{ item.instances[0].public_ip }}",
+          'user': "{{ ssh_user }}",
+          'port': "{{ ssh_port }}",
+          'identity_file': "{{ keypair_path }}",
+          'instance_ids': "{{ item.instance_ids }}"
+        }
+      with_items: "{{ ec2_jobs.results }}"
+      register: instance_config_dict
+      when: server.changed | bool
+
+    - name: Convert instance config dict to a list
+      set_fact:
+        instance_conf: "{{ instance_config_dict.results | map(attribute='ansible_facts.instance_conf_dict') | list }}"
+      when: server.changed | bool
+
+    - name: Dump instance config
+      copy:
+        content: "{{ instance_conf | to_json | from_json | molecule_to_yaml | molecule_header }}"
+        dest: "{{ molecule_instance_config }}"
+      when: server.changed | bool
+
+    - name: Wait for SSH
+      wait_for:
+        port: "{{ ssh_port }}"
+        host: "{{ item.address }}"
+        search_regex: SSH
+        delay: 10
+        timeout: 320
+      with_items: "{{ lookup('file', molecule_instance_config) | molecule_from_yaml }}"
+
+    - name: Wait for boot process to finish
+      pause:
+        minutes: 2

@@ -1,0 +1,11 @@
+---
+
+- name: 2.2.0.Prefix the Docker CLI package version with the correct separator on RedHat.
+  set_fact:
+    _docker_cli_package_version: "-{{ docker_cli_package_version }}"
+  when: docker_cli_package_version | length > 0
+
+- name: 2.2.1.Install the Docker CLI.
+  package:
+    name: "{{ docker_cli_package_name }}{{ _docker_cli_package_version | default('') }}"
+    state: "{{ docker_cli_package_state }}"

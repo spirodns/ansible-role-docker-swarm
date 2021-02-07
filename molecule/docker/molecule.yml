@@ -1,0 +1,25 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  ansible-lint
+  yamllint .
+  flake8
+platforms:
+  - name: docker-amzlinux2
+    image: "amazonlinux:2"
+  - name: docker-centos7
+    image: "centos:7"
+provisioner:
+  name: ansible
+  log: true
+  playbooks:
+    converge: ../shared-resources/playbooks/playbook.yml
+scenario:
+  name: docker
+verifier:
+  name: testinfra
+  directory: ../shared-resources/tests
+

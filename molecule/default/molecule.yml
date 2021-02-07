@@ -1,0 +1,57 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  ansible-lint
+  yamllint .
+  flake8
+platforms:
+  - name: centos7-manager0000
+    image: "centos:7"
+    command: /sbin/init
+    privileged: True
+    groups:
+      - docker_swarm_manager
+  - name: centos7-worker0000
+    image: "centos:7"
+    command: /sbin/init
+    privileged: True
+    groups:
+      - docker_swarm_worker
+  - name: centos8-manager0000
+    image: "centos:8"
+    command: /sbin/init
+    privileged: True
+    groups:
+      - docker_swarm_manager
+  - name: centos8-worker0000
+    image: "centos:8"
+    command: /sbin/init
+    privileged: True
+    groups:
+      - docker_swarm_worker
+  - name: amzlinux2-manager0000
+    image: "amazonlinux:2"
+    command: /usr/lib/systemd/systemd
+    privileged: True
+    groups:
+      - docker_swarm_manager
+  - name: amzlinux2-worker0000
+    image: "amazonlinux:2"
+    command: /usr/lib/systemd/systemd
+    privileged: True
+    groups:
+      - docker_swarm_worker
+provisioner:
+  name: ansible
+  log: true
+  playbooks:
+    converge: ../shared-resources/playbooks/playbook.yml
+scenario:
+  name: default
+verifier:
+  name: testinfra
+  directory: ../shared-resources/tests
+

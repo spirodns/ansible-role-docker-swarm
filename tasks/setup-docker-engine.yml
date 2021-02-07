@@ -1,0 +1,87 @@
+---
+- name: 2.1.0.Prefix the Docker package version with the correct separator on RedHat.
+  set_fact:
+    _docker_package_version: "-{{ docker_package_version }}"
+  when: "ansible_os_family == 'RedHat' and
+         ansible_distribution != 'Amazon' and
+         docker_package_version | length > 0"
+
+- name: 2.1.1.a.Install Docker.
+  package:
+    name: "{{ docker_package_name }}{{ _docker_package_version | default('') }}"
+    state: "{{ docker_package_state }}"
+  when: "ansible_os_family == 'RedHat' and
+         ansible_distribution != 'Amazon' "
+
+- name: 2.1.1.b.Install Docker to Amazon Linux 2.
+  package:
+    name: "{{ docker_package_name_amzlinux2 }}{{ _docker_package_version | default('') }}"
+    state: "{{ docker_package_state }}"
+  when: "ansible_os_family == 'RedHat' and
+         ansible_distribution == 'Amazon'"
+
+- block:
+
+    - name: 2.1.1.1.Create the systemd overrides directory for Docker.
+      file:
+        name: "/etc/systemd/system/docker.service.d"
+        state: directory
+
+    - name: 2.1.1.2.Override the systemd unit for Docker.
+      template:
+        src: docker-override.conf.j2
+        dest: "/etc/systemd/system/docker.service.d/override.conf"
+      register: _docker_systemd_override
+
+    - name: 2.1.1.3.Reload systemd and restart Docker.
+      service:
+        name: docker
+        state: "{% if docker_service_state != 'stopped' %}restarted{% else %}stopped{% endif %}"
+        daemon_reload: yes
+      when: _docker_systemd_override.changed
+
+  when: docker_service_override | length > 0
+    and ansible_service_mgr == 'systemd'
+
+- name: 2.1.2.1.Make sure the Docker daemon configuration directory exists.
+  file:
+    path: /etc/docker
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+
+
+- name: 2.1.2.2.Make sure the cron.hourly directory exists.
+  file:
+    path: /etc/cron.hourly
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+
+- name: 2.1.3.Configure Docker cleanup.
+  template:
+    src: docker-cleanup.cron.j2
+    dest: /etc/cron.hourly/docker-cleanup.cron
+    owner: root
+    group: root
+    mode: 0644
+
+- name: 2.1.4.Enable the Docker daemon service and start it.
+  service:
+    name: docker
+    state: "{{ docker_service_state }}"
+    enabled: "{{ docker_service_enabled }}"
+
+- name: 2.1.5.Configure the Docker deamon.
+  template:
+    src: docker-daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart docker
+
+- name: Force all notified handlers to run at this point, not waiting for normal sync points
+  meta: flush_handlers

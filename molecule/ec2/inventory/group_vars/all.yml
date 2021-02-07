@@ -1,0 +1,24 @@
+---
+role_name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+branch: master
+security_group_description: "Security group for molecule testing"
+sg_ing_rules: []
+keypair_path: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/ssh_key"
+ssh_port: 22
+ssh_user: ec2-user
+ansible_user: "{{ ssh_user }}"
+ansible_private_key_file: "{{ keypair_path }}"
+instance_type: m3.medium
+security_group_rules:
+  ingress:
+    - proto: tcp
+      from_port: 22
+      to_port: 22
+    - proto: icmp
+      from_port: 8
+      to_port: -1
+  egress:
+    - proto: -1
+      from_port: 0
+      to_port: 0
+      cidr_ip: '0.0.0.0/0'

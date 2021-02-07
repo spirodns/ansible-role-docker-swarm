@@ -1,0 +1,28 @@
+---
+- block:
+      # Install containerd
+    - name: 2.0.Install containerd
+      include: setup-containerd.yml
+      when: (ansible_distribution != 'Amazon' and  not skip_containerd)
+      tags:
+        - install-docker-core
+        - install-containerd
+
+    # Install the Docker Engine
+    - name: 2.1.Install the Docker Engine
+      include: setup-docker-engine.yml
+      when: not skip_engine
+      tags:
+        - install-docker-core
+        - install-docker-engine
+
+    # Install the Docker CLI
+    - name: 2.2.Install the Docker CLI
+      include: setup-docker-cli.yml
+      when: (ansible_distribution != 'Amazon' and  not skip_cli)
+      tags:
+        - install-docker-core
+        - install-docker-cli
+
+
+

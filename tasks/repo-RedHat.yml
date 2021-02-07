@@ -1,0 +1,46 @@
+---
+
+- name: 1.0.1.Install epel-release
+  package:
+    name: "epel-release"
+    state: present
+  notify: clean yum cache
+  when:
+    - not skip_docker_compose
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution != 'Amazon'
+  tags:
+    - setup
+    - setup-repos
+    - setup-repo-epel
+
+
+- name: 1.0.2.Add the YUM Docker repository.
+  yum_repository:
+    name: "{{ docker_repo['name'] }}"
+    file: "{{ docker_repo['name'] }}"
+    description: "{{ docker_repo['name'] }}"
+    baseurl: "{{ docker_repo['yum_repo'] }}"
+    gpgkey: "{{ docker_repo['yum_gpg_key'] | default(omit) }}"
+    gpgcheck: "{{ docker_repo['yum_gpg_check'] | default(False) }}"
+    state: present
+  notify: clean yum cache
+  when:
+    - not skip_docker_compose
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution != 'Amazon'
+  tags:
+    - setup
+    - setup-repos
+    - setup-repo-docker
+
+- name: Enable amazon-linux-extras on Amazon Linux 2
+  shell: >
+    amazon-linux-extras enable "{{ docker_package_name_amzlinux2}}"
+  #shell: "amazon-linux-extras enable docker"
+  become: yes
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution == 'Amazon'
+    - ansible_distribution_version == '2'
+
