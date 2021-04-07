@@ -12,7 +12,7 @@
 
 - name: 2.0.1.b.Install containerd on RHEL 8.
   package:
-    name: "https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.6-3.3.el7.x86_64.rpm"
+    name: "https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.4.4-3.1.el7.x86_64.rpm"
     state: "{{ containerd_package_state }}"
   when: ansible_os_family == 'RedHat' and ansible_distribution_major_version == '8'
 

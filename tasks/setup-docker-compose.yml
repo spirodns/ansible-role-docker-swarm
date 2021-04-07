@@ -23,7 +23,7 @@
     url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}"
     dest: "/usr/local/bin/docker-compose"
     mode: '0755'
-    timeout: 120
+    timeout: 180
   tags:
     - install-docker-compose
     - download-docker-compose
