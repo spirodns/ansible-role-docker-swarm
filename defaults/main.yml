@@ -12,6 +12,7 @@ skip_docker_core: false # if true, skips the setup of all docker components
 skip_containerd: false  # if true, skips the setup of containerd
 skip_engine: false      # if true, skips the docker engine installation
 skip_cli: false         # if true, skips the docker cli installation
+skip_autocompletion: false  # if true, skips docker autocompletion
 
 skip_swarm: false       # if true, skips the swarm setup
 skip_swarm_labels: false    # if true, skips swarm labels setting

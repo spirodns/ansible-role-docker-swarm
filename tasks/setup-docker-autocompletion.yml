@@ -1,0 +1,17 @@
+---
+- name: 2.3.1.Install bash-completion (for docker command auto-completion)
+  #  shell: yum install -y bash-completion --enablerepo=epel
+  package:
+    name: bash-completion
+    state: present
+  register:
+  tags:
+    - install-docker-core
+    - install-docker-autocompletion
+
+- name: 2.3.2.Download the docker-autocompletion script
+  shell: curl https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker
+  register:
+  tags:
+    - install-docker-core
+    - install-docker-autocompletion
