@@ -1,7 +1,7 @@
 boto    # Needed for ec2 driver specificaly
 boto3   # Needed for ec2 driver specificaly
 awscli  # Needed for ec2 driver specificaly
-ansible==2.7
+ansible==2.9
 docker
 molecule>=3.0a3
 molecule-ec2
