@@ -24,5 +24,11 @@
         - install-docker-core
         - install-docker-cli
 
-
+    # Install Docker autocompletion
+    - name: 2.3.Install Docker autocompletion
+      include: setup-docker-autocompletion.yml
+      when: not skip_autocompletion
+      tags:
+        - install-docker-core
+        - install-docker-autocompletion
 
