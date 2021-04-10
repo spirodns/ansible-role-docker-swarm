@@ -1,0 +1,75 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: podman
+lint: |
+  ansible-lint
+  yamllint .
+  flake8
+platforms:
+  - name: centos7-manager00
+    image: "centos:7"
+      #    command: /sbin/init
+      #    privileged: True
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    capabilities:
+      - SYS_ADMIN
+    command: "/usr/sbin/init"
+    groups:
+      - docker_swarm_manager
+  #  - name: instance
+  #    image: docker.io/pycontribs/centos:7
+  #    pre_build_image: true
+  #    groups:
+  #      - docker_swarm_manager
+        #  - name: centos8-manager0000
+        #    image: centos:8
+        #    command: /sbin/init
+        #    privileged: true
+        #    groups:
+        #      - docker_swarm_manager
+        #  - name: instance
+        #    image: "centos:8"
+        #    command: /sbin/init
+        #    privileged: True
+        #      #image: docker.io/pycontribs/centos:8
+        #      #pre_build_image: true
+        #  - name: rhel8
+        #  - name: rhel8-manager01
+        #    image: registry.access.redhat.com/ubi8/ubi-init
+        #    tmpfs:
+        #      - /run
+        #      - /tmp
+        #    volumes:
+        #      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+        #    capabilities:
+        #      - SYS_ADMIN
+        #    command: "/usr/sbin/init"
+        #    pre_build_image: true
+        #    groups:
+        #      - docker_swarm_manager
+      #  - name: ubuntu
+      #    image: geerlingguy/docker-ubuntu2004-ansible
+      #    tmpfs:
+      #      - /run
+      #      - /tmp
+      #    volumes:
+      #      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      #    capabilities:
+      #      - SYS_ADMIN
+      #    command: "/lib/systemd/systemd"
+      #    pre_build_image: true
+provisioner:
+  name: ansible
+  log: true
+  playbooks:
+    converge: ../shared-resources/playbooks/playbook.yml
+scenario:
+  name: podman
+verifier:
+  name: testinfra
+  directory: ../shared-resources/tests
+verifier:
+  name: ansible

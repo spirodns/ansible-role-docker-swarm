@@ -8,3 +8,5 @@ molecule-ec2
 Jinja2==2.10
 testinfra==1.19.0
 molecule-docker
+molecule-podman
+podman
